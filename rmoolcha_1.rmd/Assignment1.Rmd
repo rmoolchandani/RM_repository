@@ -1,0 +1,62 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+
+Dataset Source: https://www.kaggle.com/crawford/80-cereals
+
+Import the dataset into R
+```{r}
+library(readr)
+Cereal <- read_csv("cereal.csv")
+```
+
+Descriptive Statistics of R
+```{r}
+# Display the Top records of Dataset
+head(Cereal)
+
+# Structure of Dataset
+str(Cereal)
+
+summary(Cereal)
+
+length(Cereal$name)
+
+min(Cereal$calories)
+
+range(Cereal$fat)
+```
+
+Transformation of Variable Protein from the Cereal Dataset
+```{r}
+Sqrt <- sqrt(Cereal$protein)
+Sqrt
+
+logT <- log10(Cereal$sodium)
+logT
+```
+
+Conversion of Variables
+```{r}
+is.numeric(Cereal$name)
+
+as.character(Cereal$calories)
+
+```
+
+Plotting of quantitative Variable fat and protein
+```{r}
+#install.packages("tidyverse")
+library(ggplot2)
+ggplot(Cereal) +  aes(x = Cereal$fat, y = Cereal$protein, color = Cereal$type) + geom_point()
+
+plot(Cereal$fat, Cereal$protein)
+```
+
+
+
