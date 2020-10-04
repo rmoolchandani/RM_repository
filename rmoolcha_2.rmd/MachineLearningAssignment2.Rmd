@@ -1,0 +1,229 @@
+---
+title: "MachineLearningAssignment2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Install package if not already installed
+```{r}
+#install.packages("caret")
+#install.packages("lattice")
+#install.packages("ggplot2")
+#install.packages("fastDummies")
+#install.packages("FNN") 
+#install.packages("e1071")
+```
+
+#load all the required libraries
+```{r}
+library(caret)
+library(readr)
+library(fastDummies)
+library(FNN)
+library(gmodels)
+library(dplyr)
+```
+
+#Import the Universal Bank Dataset
+```{r}
+UBank <- read.csv("UniversalBank.csv")
+```
+
+
+***
+Remember to transform categorical predictors with more than two categories into dummy variables first
+***
+
+#Create Dummy variables for the column Education 
+```{r}
+UBank <- dummy_cols(UBank, select_columns = 'Education')
+head(UBank)
+```
+
+#Remove ID,Zip Code & Education Columns and factor Personal loan column
+```{r}
+UBank <- select(UBank, -ID, -ZIP.Code, -Education)
+head(UBank)
+UBank$Personal.Loan <- factor(UBank$Personal.Loan)
+```
+
+#Partition the data into training (60%) and validation #(40%) sets
+```{r}
+set.seed(123)
+Train_Index=createDataPartition(UBank$Age, p=0.60, list=FALSE)
+Train_Data = UBank[Train_Index,] 
+Validation_Data = UBank[-Train_Index,] 
+summary(Train_Data)
+summary(Validation_Data)
+```
+
+#Normalize the dataset and remove personal loan column
+```{r}
+#Copy the original data and remove personal loan column
+Train.norm.df <- Train_Data[,-7]
+Valid.norm.df <- Validation_Data[,-7]
+#Normalize data
+norm.values <- preProcess(Train.norm.df, method=c("center", "scale"))
+#Replace with the normalized data
+Train.norm.df <- predict(norm.values, Train.norm.df) 
+Valid.norm.df <- predict(norm.values, Valid.norm.df)
+```
+
+***
+Consider the following customer:Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1, and Credit Card = 1. Perform a k-NN classification with all predictors except ID and ZIP code using k = 1
+***
+
+#Classify the customer with k=1
+```{r}
+new.data1 = data.frame(Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2,  Mortgage = 0, Securities.Account = 0 , CD.Account = 0 ,Online = 1, CreditCard = 1, Education_1 = 0, Education_2 = 1, Education_3 = 0)
+#Replace with normalized data
+new.data1 <- predict(norm.values, new.data1) 
+#KNN Modeling
+nn2 <- knn(train = Train.norm.df, test = new.data1, cl = Train_Data$Personal.Loan, k=1, prob=TRUE)
+nn2
+```
+
+***
+Customer is classified as a 0.
+***
+
+***
+What is a choice of k that balances between overfitting and ignoring the predictor information
+***
+
+#Perform Accuracy
+```{r}
+accuracy.df <- data.frame(k = seq(1, 14, 1), accuracy = rep(0, 14))
+for(i in 1:14) {
+  knn.pred <- knn(Train.norm.df, Valid.norm.df, cl = Train_Data$Personal.Loan, k = i)
+  accuracy.df[i, 2] <- confusionMatrix(knn.pred,Validation_Data$Personal.Loan)$overall[1] 
+}
+accuracy.df
+plot(accuracy.df)
+```
+
+***
+the best Choice of K is 5.
+***
+
+***
+Show the confusion matrix for the validation data that results from using the best k and explain different error types that you observe.
+***
+
+#Perform k-NN classification for validation set with k=5
+```{r}
+nn <- knn(train = Train.norm.df, test = Valid.norm.df , cl = Train_Data$Personal.Loan, k=5, prob=TRUE)
+knn.attributes <- attributes(nn)
+```
+
+#Show the confusion matrix for the validation data
+```{r}
+confusionMatrix(nn, Validation_Data$Personal.Loan)
+```
+
+***
+Error Type I is False positives which is 72 in this case
+Error Type II is False negatives which is 10 in this case
+***
+
+***
+Consider the following customer: Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities Account = 0, CD Account = 0, Online = 1 and Credit Card = 1. Classify the customer using the best k.
+***
+
+# Classify the cutomer with k=5 with training set. Also, Classify the customer with k=5 with combined training and validation set
+```{r}
+Traval_data <- rbind(Train_Data,Validation_Data)
+Traval_norm <- Traval_data[,-7]
+#Normalize data
+norm.values1 <- preProcess(Traval_norm, method=c("center", "scale"))
+#Replace with normalized data
+Traval_norm <- predict(norm.values1, Traval_norm) 
+#Consider the customer
+new.data = data.frame(Age = 40, Experience = 10, Income = 84, Family = 2, CCAvg = 2,  Mortgage = 0, Securities.Account = 0 , CD.Account = 0 ,Online = 1, CreditCard = 1, Education_1 = 0, Education_2 = 1, Education_3 = 0)
+#Normalize the test data
+new.data <- predict(norm.values1, new.data) 
+#Classify the customer with combined Training and Validation data set
+nn1 <- knn(train = Traval_norm, test = new.data, cl = Traval_data$Personal.Loan , k=5, prob=TRUE)
+nn1
+#Also, Classify the customer with only Training data set
+nn3 <- knn(train = Train.norm.df, test = new.data1, cl = Train_Data$Personal.Loan, k=5, prob=TRUE)
+nn3
+```
+
+***
+With both the data sets (training and Combined training and validation), Customer is classified as 0.
+***
+
+***
+Re-partition the data, this time into training, validation, and test sets (50% : 30% : 20%). Apply the k-NN method with the k chosen above
+***
+
+#Repartition the data and apply knn method
+```{r}
+head(UBank)
+set.seed(123)
+Train_Index1=createDataPartition(UBank$Age, p=0.50, list=FALSE)
+Train_Data1 = UBank[Train_Index1,] 
+Validation_Index1 = createDataPartition(UBank$Age, p=0.30, list=FALSE)
+Validation_Data1 = UBank[Validation_Index1,]
+Test_index1 = createDataPartition(UBank$Age, p = 0.2,list = FALSE)
+Test_data1 = UBank[Test_index1,]
+#Remove the personal loan column
+Train_norm1 <- Train_Data1[,-7]
+Validation_norm1 <- Validation_Data1[,-7]
+Test_norm1 <-Test_data1[,-7]
+#Normalize the Re-partitioned data
+norm.values2 <- preProcess(Train_norm1,method=c("center", "scale"))
+Train_norm1<- predict(norm.values2,Train_norm1)
+Validation_norm1<- predict(norm.values2,Validation_norm1)
+Test_norm1<- predict(norm.values2,Test_norm1)
+# KNN Modeling on training set
+knnTrain <- knn(train= Train_norm1, test= Train_norm1, cl=Train_Data1$Personal.Loan, k=5, prob = TRUE)
+# KNN Modeling on Validation set
+knnValid <- knn(train= Train_norm1, test= Validation_norm1, cl=Train_Data1$Personal.Loan, k=5, prob = TRUE)
+# KNN Modeling on Test set
+knnTest <- knn(train= Train_norm1, test= Test_norm1, cl=Train_Data1$Personal.Loan, k=5, prob = TRUE)
+#Combine the Training and Validation set and normalize it
+Traval_data1 <- rbind(Train_Data1,Validation_Data1)
+Traval_norm1 <- Traval_data1[,-7]
+Test_norm2 <-Test_data1[,-7]
+norm.values3 <- preProcess(Traval_norm1, method=c("center", "scale"))
+Traval_norm1<- predict(norm.values3,Traval_norm1)
+Test_norm2<- predict(norm.values3,Test_norm2)
+#KNN modeling on test set with the combined training and Validation set
+knnTest1 <- knn(train= Traval_norm1, test= Test_norm2, cl=Traval_data1$Personal.Loan, k=5, prob = TRUE)
+```
+
+***
+Compare the confusion matrix of the test set with that of the training and validation sets
+***
+
+#Show Confusion Matrix for Training data set
+```{r}
+confusionMatrix(knnTrain, Train_Data1$Personal.Loan)
+```
+
+#Show Confusion Matrix for Validation data set
+```{r}
+confusionMatrix(knnValid, Validation_Data1$Personal.Loan)
+```
+
+#Show Confusion Matrix for Test data set 
+```{r}
+confusionMatrix(knnTest, Test_data1$Personal.Loan)
+```
+
+#Show Confusion Matrix for Test data set with combined training and validation data set
+```{r}
+confusionMatrix(knnTest1, Test_data1$Personal.Loan)
+```
+
+***
+Training data set Accuracy = 0.966
+Validation data Set Accuracy =0.9541
+Test data Set Accuracy =0.956
+The classifications are most accurate on the training data set and least accurate on the validation data set.
+***   
