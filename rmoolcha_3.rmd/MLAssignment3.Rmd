@@ -1,0 +1,136 @@
+---
+title: "MLAssignment3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Install package if not already installed
+```{r}
+#install.packages("caret")
+#install.packages("lattice")
+#install.packages("ggplot2")
+#install.packages("e1071")
+#install.packages("klaR")
+#install.packages("psych")
+#install.packages("rpivotTable")
+```
+
+
+#load all the required libraries
+```{r, results='hide'}
+library(caret)
+library(readr)
+library(gmodels)
+library(ISLR)
+library(e1071) 
+library(dplyr)
+library(pROC)
+library(rpivotTable)
+```
+
+
+# Import the FlightDelays Dataset
+```{r}
+FlightData <- read.csv("FlightDelays.csv")
+summary(FlightData)
+```
+
+
+# Record Week columns as fators
+```{r}
+FlightData$DAY_WEEK <- factor(FlightData$DAY_WEEK)
+levels(FlightData$DAY_WEEK)
+```
+
+
+# Create bins for Scheduled Departure Time column and record it as factors
+```{r}
+FlightData$CRS_DEP_TIME <- floor(FlightData$CRS_DEP_TIME/100)
+FlightData$CRS_DEP_TIME <- factor(FlightData$CRS_DEP_TIME)
+levels(FlightData$CRS_DEP_TIME)
+```
+
+
+# Label the outcome variable in two classes (1 = Delayed, 0 = Ontime)
+```{r}
+FlightData$Flight.Status <- factor(FlightData$Flight.Status, levels = c("ontime","delayed"), labels = c(0,1))
+levels(FlightData$Flight.Status)
+```
+
+
+# Partition the data into training (60%) and validation (40%) sets
+```{r}
+set.seed(123)
+Train_Index=createDataPartition(FlightData$CRS_DEP_TIME, p=0.60, list=FALSE)
+Train_Data = FlightData[Train_Index,] 
+Validation_Data = FlightData[-Train_Index,] 
+```
+
+
+# Now, run the Naive Bayes model on the training dataset
+```{r}
+nb_model <- naiveBayes(Train_Data$Flight.Status~CARRIER+DEST+ORIGIN+DAY_WEEK+CRS_DEP_TIME, data = Train_Data)
+nb_model
+```
+
+***
+# The output from the Naive Bayes model predicts that the probability of Delayed flight is 0.2019593 and the probability for On time flights is 0.7980407 
+***
+
+
+# Output Counts table and proportion table for flights that are delayed and ontime from Origin
+```{r}
+#Counts table 
+rpivotTable(FlightData, rows = "Flight.Status", cols = "ORIGIN", width = "100%", height = "400px")
+
+#Proportion Table
+prop.table(table(FlightData$Flight.Status, FlightData$ORIGIN),margin = 1)
+```
+
+
+# Output Counts table and proportion table for ontime and delayed flights at Destination
+```{r}
+#Counts table
+rpivotTable(FlightData, rows = "Flight.Status", cols = "DEST", width = "100%", height = "400px")
+
+#Proportion Table
+prop.table(table(FlightData$Flight.Status, FlightData$DEST),margin = 1)
+```
+
+
+# Confusion matrix for the validation data
+```{r}
+#Make predictions and return probability 
+PredictData <-predict(nb_model,Validation_Data)
+
+#show the first few values
+head(PredictData)
+
+#Confusion Matrix
+confusionMatrix(PredictData, Validation_Data$Flight.Status)
+```
+
+***
+# The Confusion matrix for the validation data set shows the Accuracy of 0.8089
+***
+
+
+# Output the ROC for the validation data
+```{r}
+#Make predictions and return probability of each class
+PredictData <-predict(nb_model,Validation_Data, type = "raw")
+
+#show the first few values
+head(PredictData)
+
+#ROC Curve for validation Data set
+roc(Validation_Data$Flight.Status, PredictData[,2])
+plot.roc(Validation_Data$Flight.Status,PredictData[,2])
+```
+
+***
+# The Area Under the Curve is 0.661
+***
