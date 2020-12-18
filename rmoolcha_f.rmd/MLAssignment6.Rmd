@@ -1,0 +1,1159 @@
+---
+title: "Machine Learning Final Exam"
+subtitle: "Segmentation of Bath Soap Consumers"
+author: "Rakhee Moolchandani"
+date: "12/17/2020"
+output: 
+  pdf_document: default
+  html_document: default
+always_allow_html: true
+---
+
+\newpage 
+\tableofcontents 
+\newpage 
+
+## 1. Introduction  
+
+CRISA is an Asian market research agency that specializes in tracking consumer purchase behavior in diffrent type of consumer groups. In one major research project, CRISA tracks numerous consumer product categories (e.g., “detergents”), and, within each category, perhaps dozens of brands. It has been traditionally segmenting  the Bath Soaps in consumer market based on the customers demographics. Going forward, they would now like to segment the market based on two different purchase processes.  
+
+1) Purchase Behavior : It depends on the customer's volume of purchase transactions, frequency of purchase and brand loyalty.  
+2) Basis of purchase : It includes percentage of volumes purchased  under price category and proposition categories.  
+
+The purpose of this assignment is to apply the appropriate machine learning technique to the business problem, and then present the solution to top-level management.  
+
+For this project, we are going to use BathSoap dataset which has 600 observations. For each observation, there are 46 measurements, which are as following:  
+
+* Member ID: Unique Identifier for each household  
+
+* Demographics:  
+  + SEC: Socioeconomic class (1= high, 5=low)  
+ 
+  + FEH: Eating Habits (1=Vegetarian, 2=Vegetarian but eat eggs, 3=non vegetarian, 0=not specified)  
+ 
+  + MT: Native Language (0=not specified, 1=Assamese, 2=Bengali, 3=English, 4=Gujarati, 5=Hindi, 6=Kannada, 7=Kashmiri, 8=Konkani, 9=Malayalam, 10=Marathi, 11=Oriya, 12=Punjabi, 13=Rajasthani, 14=Sindhi, 15=Tamil, 16=Telegu, 17=Urdu, 18=Sanskrit, 19=Other)  
+ 
+  + SEX: Gender of Homemaker (1=Male, 2=Female)  
+ 
+  + AGE: Age of Homemaker (1=Upto 24 years, 2=25-34 years, 3=35-44 years, 4= 45+ years)  
+ 
+  + EDU: Education of Homemaker (0=not specified, 1=Illiterate, 2=Literate but no schooling, 3=Upto 4 years of School, 4= 5-9 years of School, 5= 10-12 years of School, 6=Some College, 7=College graduate, 8=Some graduate School, 9= Graduate or professional school degree)  
+ 
+  + HS: Number of members in Household  
+ 
+  + CHILD: Presence of children in household (1=children upto age 6, 2=children age 7-14, 3=Both, 4=None, 5=not specified)  
+ 
+  + CS: Television Availability (1=available, 2=unavailable)  
+ 
+  + Affluence Index: Weighted value of durables processed  
+ 
+* Purchase Summary:  
+
+  + No. of Brands: Number of brands purchased  
+ 
+  + Brand Runs: Number of instances of consecutive purchase of brands  
+ 
+  + Total Volume: Sum of Volume  
+ 
+  + No. of Trans: Number of purchase transactions  
+ 
+  + Value: Sum of Value  
+ 
+  + Trans/ Brand Runs: Average transaction per brand run  
+ 
+  + Vol/Trans: Average volume per transaction  
+ 
+  + Avg. Price: Average price of purchase  
+ 
+* Purchase within Promotion:  
+
+  + No Promo -%: Percentage of volume purchased under no promotion  
+ 
+  + rlapPur Vol Promo 6%: Percentage of volume purchased under promotion code 6  
+ 
+  + Pur Vol Other Promo %: Percentage of volume purchased under other promotions
+ 
+* Brandwise purchase: Percentage of volume purchased of the brands  
+
+  + Br..Cd..57..144 (Lux Beauty, Lux International)  
+ 
+  + Br..Cd..55 (Lifebuaoy)  
+ 
+  + Br..Cd..272 (Cinthol Lime Fresh)  
+ 
+  + Br..Cd..286 (Santoor(Tur & Sandal))  
+ 
+  + Br..Cd..24 (Pears)  
+ 
+  + Br..Cd..481 (Godrej Fair Glow)  
+ 
+  + Br..Cd..352 (Hamam Herbal)  
+ 
+  + Br..Cd..5 (Detol)  
+ 
+  + Others.999 (Others)  
+ 
+* Price Category-wise Purchase: Price Cat 1 to 4: Percentage of volume purchased under the price category  
+
+  + Pr.Cat.1 (Any Premium Soaps)  
+ 
+  + Pr.Cat.2 (Any Popular Soaps)  
+ 
+  + Pr.Cat.3 (Any Economy/Carbolic)  
+ 
+  + Pr.Cat.4 (Any Sub-popular)  
+ 
+* Selling proposition-wise purchase: Proposition Cat 5 to 15: Percentage of volume purchased under the product proposition Category  
+
+  + PropCat.5 (Any Beauty)  
+ 
+  + PropCat.6 (Any Health)  
+ 
+  + PropCat.7 (Any Herbal)  
+ 
+  + PropCat.8 (Any Freshness)  
+ 
+  + PropCat.9 (Any Hair)  
+ 
+  + PropCat.10 (Any Skincare)  
+ 
+  + PropCat.11 (Any Fairness)  
+ 
+  + PropCat.12 (Any Baby)  
+ 
+  + PropCat.13 (Any Glycerine)  
+ 
+  + PropCat.14 (Any Carbolic)  
+ 
+  + PropCat.15 (Any Others)  
+ 
+
+
+```{r,message=FALSE, include=FALSE}
+# Load the required libraries
+library(readr) 
+library(tidyverse)
+library(e1071)
+library(caret) 
+library(proxy)
+library(factoextra) 
+library(psych) 
+library(dplyr)
+library(ggplot2) 
+library(corrplot) 
+library(RColorBrewer) 
+library(cluster)
+library(gridExtra)
+library(fastmatch)
+library(GGally)
+library(mlbench)
+library(pROC)
+library(ROCR)
+```
+
+\newpage
+
+## 2. Reading and Understanding the Data  
+
+```{r, echo=FALSE}
+# Load the file
+BathSoap <- read.csv("BathSoap.csv")
+```
+
+
+Show the first and the last row 
+```{r, echo=FALSE}
+# Show the first row
+head(BathSoap[1,])
+
+# Show the last row 
+tail(BathSoap[1,])
+```
+
+
+It is important to run the head and tail of the dataset to confirm that the dataset is similar among its data points.
+
+\newpage
+
+## 3. Data Exploration and Visualization
+
+```{r, echo=FALSE, results='hide'}
+# To get the total number of rows and columns
+dim(BathSoap)
+```
+
+
+Looking at the dimensions of the data, we can say that Bathsoap dataset has 600 data points and 46 variables.
+
+
+```{r, echo=FALSE, results='hide'}
+# See the data frame structure
+str(BathSoap)
+```
+
+
+After seeing the dataset structure, we can conclude that the "BathSoap" dataset contains most of the variables as numeric type in nature. 
+
+
+```{r, echo=FALSE, results='hide'}
+# See descriptive statistics
+summary(BathSoap) 
+```
+
+
+Looking at some descriptive statistics, we can say that there are no missing values in the dataset, so there is no need to remove or impute any data points.
+
+
+**Lets visualize the data for each demographic attribute**
+
+```{r, message=FALSE, echo=FALSE}
+BathSoap%>% gather(Attributes, value,1:10) %>% ggplot(aes(x=value)) + geom_histogram(fill = "lightblue", color = "blue") + facet_wrap(~Attributes, scales = "free_x") + labs(x = "Value", y = "Frequency")
+```
+
+
+This allows us to visualize the statistical distribution of the demographic variables. Here we can visualize the following points:  
+
+* Majority of the buyers are female.  
+
+* Most of the participants speak Marathi.  
+
+* Most of the people have education of 5-9 or 10-12 years of schooling.  
+
+\newpage
+
+## 4. Data Preparation  
+
+There are other few changes that needs to be done.  
+* Percentage values needs to be converted into numeric value by removing the percentage sign.  
+* Drop the "member.id" column.  
+
+Now, we can see the structure of the data to confirm that the Member id Column has been dropped and %'s are removed from the dataset.
+```{r, echo=FALSE}
+# Lets save the original dataset before making any changes for future reference
+MasterBathSoap <- BathSoap
+# Remove "%" sign from percentage variables and convert them to numeric
+MasterBathSoap[ ,20:46] <- apply(MasterBathSoap[ ,20:46],2,function(x) {as.numeric(sub("%", "", x))})
+# Remove "Member.id" column from dataset
+MasterBathSoap <- MasterBathSoap[ , -1]
+# Return dataframe structure to confirm removal of "%"s and Member id
+str(MasterBathSoap)
+```
+
+
+
+\newpage 
+
+## 5. Brand Loyalty Measure  
+
+The dataset provides us data on the number of brands purchased; however, there are several different types of views on brand loyalty:  
+
+
+1. Number of Different Brands Purchased by a Customer
+
+```{r}
+# Show "No..of.Brands" variable for reference
+head(MasterBathSoap$No..of.Brands) 
+```
+
+
+2. How Often Customers Switch from One Brand to Another Brand  
+
+```{r}
+# Show "Trans...Brand.Runs" variable for reference
+head(MasterBathSoap$Trans...Brand.Runs)
+```
+
+
+3. Proportion of Purchases that goes to One single Brand (Brand Loyalty)
+
+This measure will require a new variable to be created from the existing data. To capture this measure of brand loyalty, the number of brands in the "Other" category will be determined. Then the "Other" category will be divided by that value (Assuming that "Other" brand is equally split if more than 1). Finally, the maximum percentage will be determined across all the brand columns to get this measure of brand loyalty.
+
+This assumption will be noted going forward for this is the assumed % purchases for each "Other" brand  
+
+```{r, echo=FALSE}
+# Add column to determine the counts of brands purchased 
+MasterBathSoap$Brand.Count <- apply(MasterBathSoap[ , 23:30], 1, function(x) sum(x > 0))
+# Add column to determine the counts of brands purchased in the "other category"
+MasterBathSoap$Brand.Count.Others <- (MasterBathSoap$No..of.Brands - MasterBathSoap$Brand.Count)
+# Divide "Others.999" column by number of others to get assumed percentage
+MasterBathSoap$Percent.Others <- ifelse(MasterBathSoap$Brand.Count.Others > 0,(MasterBathSoap$Others.999 / MasterBathSoap$Brand.Count.Others),0)
+# Create column that finds maximum purchase percentage by brand
+MasterBathSoap$Brand.Percent.Max <- apply(MasterBathSoap[ , c(23:29, 48)], 1, function(x) max(x))
+# See the  new columns added into dataset
+head(MasterBathSoap[45:49])
+```
+
+\newpage
+
+## 6. Scaling / Normalization  
+
+The data must be scaled, before performing the k-means clustering algorithm.  
+
+```{r}
+# Create copy of the dataset for future reference
+BathSoapScaled <- MasterBathSoap
+# Scaling the Numeric values that are used in the cluster analysis 
+BathSoapScaled[ , 11:49] <- scale(MasterBathSoap[ , 11:49])
+```
+
+
+## 7. Correlation Matrix  
+
+What’s the relationship between the different scaled attributes? Use `corrplot()` to create correlation matrix.  
+
+```{r, echo=FALSE}
+# Multivariate correlation matrix
+corrplot(cor(BathSoapScaled), type = "lower",main="Correlation matrix", order = "hclust", mar=c(0,0,1,0),tl.cex=0.5,tl.col="black", col = brewer.pal(n = 8, name = "PuOr"))
+```
+
+
+
+There is positive correlation between:  
+1) Number of members in Household and the Volume of purchase.  
+2) Number of Transactions and value.  
+
+There is negative correlation between:  
+1) Average price and the Economy category soaps.  
+etc.
+
+
+\newpage
+
+## 8. K-Means Clustering  
+
+### Purchase Behavior  
+
+Purchase behavior will be captured by the following variables in the dataset:  
+
+1. No. of Brands
+2. Brand Runs
+3. Total Volume
+4. No. of Trans
+5. Value
+6. Trans/Brand Runs
+7. Vol/Trans
+8. Avg. Price
+9. No Promo - %
+10. Pur Vol Promo 6%
+11. Pur Vol Other Promo
+12. Brand.Percent.Max
+
+
+**Computing Distance for Purchase Behavior**  
+
+For computing the distance, we are going to use the get_dist function from the factoextra package in R.
+The get_dist() function computes a distance matrix between the rows of a data matrix and it uses the Euclidean distance as default.  
+
+```{r, echo=FALSE}
+# Computing the distance
+dist1 <- get_dist(BathSoapScaled[ , c(11:21, 49)])
+
+#  Let’s visualize our distances. The fviz_dist() function visualizes a distance matrix
+fviz_dist(dist1, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07",lab_size = 0.1), lab_size = 5)
+```
+
+
+This graph is a distance matrix. As we can see, the diagonal values with blue line are zeros because it is showing the distance between any point against itself. The orange represents the furthest distance between any pair of observations.  
+\newpage
+
+**Find the optimal number of clusters using both the elbow method and the silhouette method**  
+
+```{r, echo=FALSE}
+# Elbow method
+p1<-fviz_nbclust(BathSoapScaled[ , c(11:21, 49)], kmeans, method = "wss") +
+  labs(title = "Elbow Method") +
+  geom_vline(xintercept = 4, linetype = 2)
+# Silhouette Method 
+p2<-fviz_nbclust(BathSoapScaled[ , c(11:21, 49)], kmeans, method = "silhouette") +
+  labs(title = "Silhouette Method")
+# Display plots side by side
+grid.arrange(p1, p2, nrow = 1)
+```
+
+
+Since the capacity of the company and budget will not allow us to exceed the number of clusters above 5, so for this analysis a k value of 4 will be chosen based on the elbow method.  
+
+
+**Run k-means Clustering**  
+
+```{r, echo=FALSE, results= 'hide'}
+# Set the seed for reproducibility
+set.seed(123)
+# Run k-means algorithm
+km1 <- kmeans(BathSoapScaled[ , c(11:21, 49)], centers = 4, nstart = 25)
+# print the model
+km1
+```
+
+
+```{r}
+# Return the size of each cluster
+km1$size
+```
+
+
+```{r, echo=FALSE}
+# Add assigned cluster to dataset
+MasterBathSoap$km1_cluster <- km1$cluster
+# Visualize the k-means output
+km1_centers <- as.data.frame(km1$centers)
+km1_centers$cluster <- as.factor(c(1,2,3,4))
+```
+
+\newpage
+
+**Visualize the Clusters**  
+
+```{r, echo=FALSE, out.width= "75%" }
+fviz_cluster(km1, data = BathSoapScaled[ , c(11:21, 49)])
+```
+
+
+**Parallel plot of Clusters**  
+
+```{r,echo=FALSE, out.width= "75%"}
+ggparcoord(km1_centers, 
+           columns = 1:12, 
+           groupColumn = "cluster", 
+           scale = "globalminmax") +
+  labs(x = "Purchase Behavior Variables",
+       y = "Scaled Values",
+       title = "K-Means - Purchase Behavior") +
+  theme(axis.text.x = element_text(angle = 90),
+        legend.position = "top",
+        plot.title = element_text(hjust = 0.5))
+```
+
+**Clusters Notes**  
+1) Cluster 1 purchases more volume under no promotions.  
+2) Cluster 2 makes more number of transactions.  
+3) Cluster 3 purchases more average volumes.  
+4) Cluster 4 purchases more under promotion code 6.  
+
+
+\newpage
+
+**Let's visualize all the demographics based on the clusters formed**   
+
+To visualize the demographics based on the clusters, we will add the cluster numbers to the original dataset (not normalized dataset)  
+
+```{r, echo=FALSE, out.width="50%"}
+# Socioeconomic Status Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEC), 
+           col = "black",
+           fill = "blue4") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Socioeconomic Level") +
+  labs(x = "Socioeconomic Status - High (1) and Low (5)", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Eating Habits Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(FEH), 
+           col = "black",
+           fill = "springgreen4") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Eating Habits") +
+  labs(x = "Eating Habits - (0) Not Specified, (1) Vegetarian, (2) Vegetarian but Eat Eggs, (3) Nonvegetarian", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Native Language Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(MT), 
+           col = "black",
+           fill = "darkred") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Native Language") +
+  labs(x = "Native Language", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Gender Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEX), 
+           col = "black",
+           fill = "yellow2") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Gender") +
+  labs(x = "Gender - (0) Not Specified, (1) Male, (2) Female", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Age Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(AGE), 
+           col = "black",
+           fill = "turquoise4") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Age of Homemaker") +
+  labs(x = "Age", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Education Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(EDU), 
+           col = "black",
+           fill = "yellowgreen") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Education") +
+  labs(x = "Education - (1) Minimum and (9) Maximum", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Household Members Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(HS), 
+           col = "black",
+           fill = "chocolate1") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Household Members") +
+  labs(x = "Household Members", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Children Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CHILD), 
+           col = "black",
+           fill = "hotpink") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Number of Children") +
+  labs(x = "Children Category", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Television Availability Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CS), 
+           col = "black",
+           fill = "maroon4") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Television Availability") +
+  labs(x = "Television Availability - (0) Not Specified, (1) Available, (2) Unavailable", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Affluence Index Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(Affluence.Index), 
+           col = "black",
+           fill = "skyblue1") +
+  facet_wrap(vars(MasterBathSoap$km1_cluster)) +
+  labs(title = "Cluster-wise Affluence Index") +
+  labs(x = "Scaled Affluence Index Rating", y = "Consumers count") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+\newpage 
+
+### Basis for Purchase  
+
+Basis for Purchase will be captured by the following variables in the dataset:  
+
+1. Price Categorywise Purchase (Categories 1 to 4)  
+2. Selling Propostionwise Purchase (Categories 5 to 15)  
+
+
+**Computing Distance for Basis of Purchase**  
+
+```{r, echo=FALSE}
+# Computing the distance
+dist2 <- get_dist(BathSoapScaled[ , 31:45])
+
+#  Let’s visualize our distances. The fviz_dist() function visualizes a distance matrix
+fviz_dist(dist2, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07",lab_size = 0.1), lab_size = 5)
+```
+
+
+\newpage
+
+**Find the optimal number of clusters using both the elbow method and the silhouette method**  
+
+```{r, echo=FALSE}
+# Elbow Method
+p1<-fviz_nbclust(BathSoapScaled[ , 31:45], kmeans, method = "wss") +
+  labs(title = "Elbow Method") +
+  geom_vline(xintercept = 3, linetype = 2)
+# Siihouette Method
+p2<-fviz_nbclust(BathSoapScaled[ , 31:45], kmeans, method = "silhouette") +
+  labs(title = "Silhouette Method")
+# Display plots side by side
+grid.arrange(p1, p2, nrow = 1)
+```
+
+
+Since the capacity of the company and budget will not allow us to exceed the number of clusters above 5, so for this analysis a k value of 3 will be chosen based on the elbow method.  
+
+
+**Run K-means clustering as before**  
+
+```{r, echo=FALSE, results='hide'}
+# Set the seed for reproducibility
+set.seed(123)
+# Rum k-means algorithm 
+km2 <- kmeans(BathSoapScaled[ , 31:45], centers = 3, nstart = 25)
+# Print Model
+print(km2)
+```
+
+
+```{r}
+# Return the size of each cluster
+km2$size
+```
+
+
+```{r, echo=FALSE}
+# Add assigned cluster to dataset
+MasterBathSoap$km2_cluster <- km2$cluster
+# Visualize the k-means output
+km2_centers <- as.data.frame(km2$centers)
+km2_centers$cluster <- as.factor(c(1,2,3))
+```
+
+
+\newpage
+
+**Visualize the Clusters**  
+
+```{r, echo=FALSE, out.width="75%"}
+fviz_cluster(km2, data = BathSoapScaled[ , 31:45])
+```
+
+
+**Parallel plot of Clusters**  
+
+```{r, echo=FALSE, out.width="75%"}
+ggparcoord(km2_centers, 
+           columns = 1:15, 
+           groupColumn = "cluster", 
+           scale = "globalminmax") +
+  labs(x = "Basis of Purchase Variables",
+       y = "Scaled Value",
+       title = "K-Means - Basis of Purchase") +
+  theme(axis.text.x = element_text(angle = 90),
+        legend.position = "top",
+        plot.title = element_text(hjust = 0.5))
+```
+
+
+**Clusters Notes**  
+1) Cluster 1 purchases more popular and beauty soaps.  
+2) Cluster 2 purchases more economic and carbolic soaps.  
+3) Cluster 3 purchases premium category and glycerin soaps.  
+
+
+\newpage
+
+**Let's visualize all the demographics based on the clusters formed**  
+
+```{r, echo=FALSE, out.width="50%"}
+# Socioeconomic Status Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEC), 
+           col = "black",
+           fill = "blue4") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Socioeconomic Level") +
+  labs(x = "Socioeconomic Status - High (1) and Low (5)", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Eating Habits Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(FEH), 
+           col = "black",
+           fill = "springgreen4") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Eating Habits") +
+  labs(x = "Eating Habits - (0) Not Specified, (1) Vegetarian, (2) Vegetarian but Eat Eggs, (3) Nonvegetarian", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Native Language Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(MT), 
+           col = "black",
+           fill = "darkred") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Native Language") +
+  labs(x = "Native Language", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Gender Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEX), 
+           col = "black",
+           fill = "yellow2") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Gender") +
+  labs(x = "Gender - (0) Not Specified, (1) Male, (2) Female", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Age Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(AGE), 
+           col = "black",
+           fill = "turquoise4") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Age of Homemaker") +
+  labs(x = "Age", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Education Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(EDU), 
+           col = "black",
+           fill = "yellowgreen") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Education") +
+  labs(x = "Education - (1) Minimum and (9) Maximum", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Household Members Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(HS), 
+           col = "black",
+           fill = "chocolate1") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Household Members") +
+  labs(x = "Household Members", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Children Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CHILD), 
+           col = "black",
+           fill = "hotpink") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Number of Children") +
+  labs(x = "Children Category", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Television Availability Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CS), 
+           col = "black",
+           fill = "maroon4") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Television Availability") +
+  labs(x = "Television Availability - (0) Not Specified, (1) Available, (2) Unavailable", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Affluence Index Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(Affluence.Index), 
+           col = "black",
+           fill = "skyblue1") +
+  facet_wrap(vars(MasterBathSoap$km2_cluster)) +
+  labs(title = "Cluster-wise Affluence Index") +
+  labs(x = "Scaled Affluence Index Rating", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+ 
+
+ 
+ \newpage
+ 
+
+### Purchase Behavior and Basis for Purchase  
+
+For this Clustering Analysis, all the variables used previously for Purchase Behavior and Basis of Purchase will be combined and used.  
+
+
+**Computing Distance for Purchase Behavior and Basis of Purchase**  
+
+```{r, echo=FALSE}
+# Computing the distance
+dist3 <- get_dist(BathSoapScaled[ , c(11:21, 31:45, 49)])
+
+#  Let’s visualize our distances. The fviz_dist() function visualizes a distance matrix
+fviz_dist(dist3, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07",lab_size = 0.1), lab_size = 5)
+```
+
+
+\newpage
+
+**Find the optimal number of clusters using both the elbow method and the silhouette method**  
+
+```{r,echo=FALSE}
+# Elbow Method
+p1<-fviz_nbclust(BathSoapScaled[ , c(11:21, 31:45, 49)], kmeans, method = "wss") +
+  labs(title = "Elbow Method") +
+  geom_vline(xintercept = 3, linetype = 2)
+# Silhouette Method
+p2<-fviz_nbclust(BathSoapScaled[ , c(11:21, 31:45, 49)], kmeans, method = "silhouette") +
+  labs(title = "Silhouette Method")
+# Display plots side by side
+grid.arrange(p1, p2, nrow = 1)
+```
+
+
+Since the capacity of the company and budget will not allow us to exceed the number of clusters above 5, so for this analysis a k value of 3 will be chosen based on the elbow method.  
+
+
+**Run K-Means Clustering as before**  
+
+```{r, echo=FALSE, results='hide'}
+# Set the seed for randomized functions
+set.seed(123)
+# Run k-means algorithm
+km3 <- kmeans(BathSoapScaled[ , c(11:21, 31:45, 49)], centers = 3, nstart = 25)
+# Print Model
+print(km3)
+```
+
+
+```{r}
+# Return the size of each cluster
+km3$size
+```
+
+
+```{r, echo=FALSE}
+# Add assigned cluster to dataset
+MasterBathSoap$km3_cluster <- as.factor(km3$cluster)
+# Visualize the k-means output
+km3_centers <- as.data.frame(km3$centers)
+km3_centers$cluster <- as.factor(c(1,2,3))
+```
+
+\newpage
+
+**Visualize the Clusters**  
+
+```{r, echo=FALSE, out.width="75%"}
+fviz_cluster(km3, data = BathSoapScaled[ , c(11:21, 31:45, 49)])
+```
+
+
+**Parallel plot of clusters**  
+
+```{r, echo=FALSE, out.width= "75%"}
+ggparcoord(km3_centers, 
+           columns = 1:27, 
+           groupColumn = "cluster", 
+           scale = "globalminmax") +
+  labs(x = "Purchase Behavior and Basis of Purchase Variables",
+       y = "Scaled Value",
+       title = "K-Means Cluster - Purchase Behavior and Basis of Purchase") +
+  theme(axis.text.x = element_text(angle = 90),
+        legend.position = "top",
+        plot.title = element_text(hjust = 0.5))
+```
+
+A detailed analysis of this clustering method will be done down below.  
+
+
+\newpage
+
+**Lets visualize all the demographics based on the clusters formed**  
+
+```{r, echo=FALSE, out.width="50%"}
+# Socioeconomic Status Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEC), 
+           col = "black",
+           fill = "blue4") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Socioeconomic Level") +
+  labs(x = "Socioeconomic Status - High (1) and Low (5)", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Eating Habits Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(FEH), 
+           col = "black",
+           fill = "springgreen4") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Eating Habits") +
+  labs(x = "Eating Habits - (0) Not Specified, (1) Vegetarian, (2) Vegetarian but Eat Eggs, (3) Nonvegetarian", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Native Language Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(MT), 
+           col = "black",
+           fill = "darkred") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Native Language") +
+  labs(x = "Native Language", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Gender Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(SEX), 
+           col = "black",
+           fill = "yellow2") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Gender") +
+  labs(x = "Gender - (0) Not Specified, (1) Male, (2) Female", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Age Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(AGE), 
+           col = "black",
+           fill = "turquoise4") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Age of Homemaker") +
+  labs(x = "Age", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Education Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(EDU), 
+           col = "black",
+           fill = "yellowgreen") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Education") +
+  labs(x = "Education - (1) Minimum and (9) Maximum", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Household Members Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(HS), 
+           col = "black",
+           fill = "chocolate1") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Household Members") +
+  labs(x = "Household Members", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Children Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CHILD), 
+           col = "black",
+           fill = "hotpink") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Number of Children") +
+  labs(x = "Children Category", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Television Availability Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(CS), 
+           col = "black",
+           fill = "maroon4") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Television Availability") +
+  labs(x = "Television Availability - (0) Not Specified, (1) Available, (2) Unavailable", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Affluence Index Plot
+ggplot(data = MasterBathSoap) +
+  geom_bar(mapping = aes(Affluence.Index), 
+           col = "black",
+           fill = "skyblue1") +
+  facet_wrap(vars(MasterBathSoap$km3_cluster)) +
+  labs(title = "Cluster-wise Affluence Index") +
+  labs(x = "Scaled Affluence Index Rating", y = "Consumers Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+```  
+
+\newpage
+
+
+## 9. Market Segmentation  
+
+The most appropriate method for clustering, based on the review of the previous three clustering methods will be the third method which is the combination of Purchase Behavior and Basis of Purchase.  
+
+The marketing team would be able to segment the market based on both of these properties. Let's find few more insights on this clustering model. 
+
+To know, what brands are being purchased by the specific clusters, let's create a table of average percent of brand purchased.  
+
+```{r, warning=FALSE, echo=FALSE}
+# Create table with average percentage of brand purchases.
+BrandsPurchased <-  MasterBathSoap %>%
+                    group_by(km3_cluster) %>%
+                    summarise(Avg_Price = mean(Avg..Price),
+                              Avg_Volume = mean(Total.Volume),
+                              Avg_Value = mean(Value),
+                              Median_Value = median(Value),
+                              Brand_57_144 = mean(Br..Cd..57..144),
+                              Brand_55 = mean(Br..Cd..55),
+                              Brand_272 = mean(Br..Cd..272),
+                              Brand_286 = mean(Br..Cd..286),
+                              Brand_24 = mean(Br..Cd..24),
+                              Brand_481 = mean(Br..Cd..481),
+                              Brand_352 = mean(Br..Cd..352),
+                              Brand_5 = mean(Br..Cd..5),
+                              Other_Brand = mean(Others.999))
+
+# See the Other brand values
+BrandsPurchased[,c(1,9:14)]
+```
+
+
+We need to determine how many "Other" brands are being purchased by certain clusters. From the table, it can be seen that Cluster 1 and 2 purchase over 50% of their product within the "Other" category and cluster 3 purchases less in the 'Other Category' and therefore are classified as the most loyal customers. Cluster 2 makes highest purchases in this category and are least loyal customers.  
+
+
+
+### Summary of Clusters  
+
+Below are the details for each cluster of this selected clustering model:  
+
+```{r pressure, echo=FALSE, fig.cap="Summary of Clusters", out.width = "100%"}
+knitr::include_graphics("Table.png")
+```
+
+
+\newpage
+
+## 10. Classification Models
+
+Now that three clusters have been identified with their purchasing behavior, basis of purchase and demographic information, there can be a targeted marketing approach for members of a certain cluster.
+For this, we are building a naive Bayes model for the two clusters, one with the high socio-economic and  high educated clusters and one with the low socioeconomic and low educated cluster.
+
+
+**Classification Model for Cluster #2 (High SEC / High EDU)**  
+
+To build the model, we need to do some data preparation, we will add a new column in the data set to classify customer 2 as success 1 and others as 0. Also, we will partition the data to create training and test data (80-20). Then we will run naive Bayes model.  
+
+```{r, echo=FALSE}
+# Set seed for Reproducibility
+set.seed(123)
+# Add Cluster to Original Dataset 
+BathSoap$Assigned_Cluster <- km3$cluster
+# Create Target2 Column to classify cluster 2 as success 1, and the others as 0
+BathSoap$Target <- ifelse(BathSoap$Assigned_Cluster == 2, 1, 0)
+# Convert demographic columns into factors 
+BathSoap[ , c(2:10, 48)] <- lapply(BathSoap[ , c(2:10, 48)], as.factor)
+# Create a training index 
+trainIndex <- createDataPartition(BathSoap$Member.id, p = 0.80, list = FALSE)
+# Create training and test data set for modeling
+train_dataset <- BathSoap[trainIndex, ]
+test_dataset <- BathSoap[-trainIndex, ]
+```
+
+
+```{r, results='hide'}
+# Set seed for Reproducibility
+set.seed(123)
+# Naive Bayes model for Cluster 2
+nb_model <- naiveBayes(train_dataset$Target ~ SEC +
+                                MT +
+                                EDU +
+                                HS +
+                                CHILD +
+                                AGE +
+                                CS +
+                                FEH +
+                                SEX +
+                                Affluence.Index,
+                              data = train_dataset)
+# Print model 
+print(nb_model)
+```
+
+
+**Confusion matrix**  
+
+```{r, echo=FALSE}
+#Make predictions and return probability 
+PredictData <-predict(nb_model,test_dataset)
+
+#Confusion Matrix
+confusionMatrix(PredictData, test_dataset$Target)
+```
+
+
+
+**ROC**  
+
+```{r, echo=FALSE}
+#Make predictions and return probability of each class
+PredictData <-predict(nb_model,test_dataset, type = "raw")
+
+#ROC Curve for validation Data set
+roc(test_dataset$Target, PredictData[,2])
+plot.roc(test_dataset$Target,PredictData[,2], col='red')
+```
+
+
+Based on the Naive Bayes model, the Accuracy of this model is approximately 71% and the AUC value is approximately 0.75.  
+
+
+
+**Classification Model for Cluster #3 (Low SEC / Low EDU)**
+
+Again, We will add a new column in the data set to classify cluster customer 3 as success 1 and others as 0. Also, we will partition the data to create training and test data (80-20). Then we will run naive bayes model. 
+
+```{r, echo=FALSE}
+# Set seed for Reproducibility
+set.seed(123)
+# Create Target3 Column to classify cluster 3 as success 1, and the others as 0
+BathSoap$Target1 <- ifelse(BathSoap$Assigned_Cluster == 3, 1, 0)
+# Convert demographic columns into factors 
+BathSoap[ , 49] <- as.factor(BathSoap[ , 49])
+# Create a training index 
+trainIndex1 <- createDataPartition(BathSoap$Member.id, p = 0.80, list = FALSE)
+# Create training and test data set for modeling
+train_dataset1 <- BathSoap[trainIndex1, ]
+test_dataset1 <- BathSoap[-trainIndex1, ]
+```
+
+
+```{r, results='hide'}
+# Set seed for Reproducibility
+set.seed(123)
+# Naive Bayes model for Cluster 2
+nb_model1 <- naiveBayes(train_dataset1$Target1 ~ SEC +
+                                MT +
+                                EDU +
+                                HS +
+                                CHILD +
+                                AGE +
+                                CS +
+                                FEH +
+                                SEX +
+                                Affluence.Index,
+                              data = train_dataset1)
+# Print model 
+print(nb_model1)
+```
+
+
+**Confusion matrix**  
+
+```{r, echo=FALSE}
+#Make predictions and return probability 
+PredictData1 <-predict(nb_model1,test_dataset1)
+
+#Confusion Matrix
+confusionMatrix(PredictData1, test_dataset1$Target1)
+```
+
+
+
+**ROC**  
+
+```{r, echo=FALSE}
+#Make predictions and return probability of each class
+PredictData1 <-predict(nb_model1,test_dataset1, type = "raw")
+
+#ROC Curve for validation Data set
+roc(test_dataset1$Target1, PredictData1[,2])
+plot.roc(test_dataset1$Target1,PredictData1[,2], col='red')
+```
+
+
+Based on the Naive Bayes model, the Accuracy of this model is approximately 77.5% the AUC value is approximately 0.79.  
+
+\newpage
+
+## 11. Results  
+
+We have developed three types of k-means clustering models.  
+1) Purchase Behavior  
+2) Basis of Purchase  
+3) Combination of above two  
+
+From results, we can conclude that  the market segmentation based on the combination of Purchase Behavior and Basis of Purchase is the best way to market the promotions. This model will help IMRB (CRISA's advertising client) to target the market and to run the promotions providing the most successful results.  
+
+Also, we have developed two supervised classification models (based on Naive Bayes model) for different clusters.  
+1) First for the high socioeconomic and high educated cluster  
+2) Second for the low socioeconomic and low educated cluster  
+Based on this, the advertising agencies can target the market promotions with best accuracy.
+
+
+## 12. Conclusion  
+
+1) Based on the Demographics, most consumers are women and watch television. Therefore, the ad campaigns should target women.  
+2) Based on the purchase behavior and basis of purchase, there are two types of targeted groups. One with high socioeconomic level and highly educated who tend to buy premium soaps and are least brand loyal. New expensive premium soaps can be marketed to them.  
+3) The second group with low socioeconomic level and low education level tend to buy most economical products and are the most loyal customers. They should be offered with discounts and family offers and gift coupons for brand loyalty.  
+
